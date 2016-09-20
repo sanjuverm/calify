@@ -1,14 +1,14 @@
-re('fs');
+var fs = require('fs');
 var readline = require('readline');
 var google = require('googleapis');
 var googleAuth = require('google-auth-library');
 
 // If modifying these scopes, delete your previously saved credentials
-// at ~/.credentials/calendar-nodejs-quickstart.json
-var SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
+// at ~/.credentials/groupssettings-nodejs-quickstart.json
+var SCOPES = ['https://www.googleapis.com/auth/apps.groups.settings'];
 var TOKEN_DIR = (process.env.HOME || process.env.HOMEPATH ||
     process.env.USERPROFILE) + '/.credentials/';
-var TOKEN_PATH = TOKEN_DIR + 'calendar-nodejs-quickstart.json';
+var TOKEN_PATH = TOKEN_DIR + 'groupssettings-nodejs-quickstart.json';
 
 // Load client secrets from a local file.
 fs.readFile('client_secret.json', function processClientSecrets(err, content) {
@@ -17,8 +17,8 @@ fs.readFile('client_secret.json', function processClientSecrets(err, content) {
     return;
   }
   // Authorize a client with the loaded credentials, then call the
-  // Google Calendar API.
-  authorize(JSON.parse(content), listEvents);
+  // Groups Settings API.
+  authorize(JSON.parse(content), listGroupSettings);
 });
 
 /**
@@ -96,34 +96,30 @@ function storeToken(token) {
 }
 
 /**
- * Lists the next 10 events on the user's primary calendar.
+ * Lists the settings of a group in the domain.
  *
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
-function listEvents(auth) {
-  var calendar = google.calendar('v3');
-  calendar.events.list({
-    auth: auth,
-    calendarId: 'primary',
-    timeMin: (new Date()).toISOString(),
-    maxResults: 10,
-    singleEvents: true,
-    orderBy: 'startTime'
-  }, function(err, response) {
-    if (err) {
-      console.log('The API returned an error: ' + err);
-      return;
-    }
-    var events = response.items;
-    if (events.length == 0) {
-      console.log('No upcoming events found.');
-    } else {
-      console.log('Upcoming 10 events:');
-      for (var i = 0; i < events.length; i++) {
-        var event = events[i];
-        var start = event.start.dateTime || event.start.date;
-        console.log('%s - %s', start, event.summary);
-      }
-    }
+function listGroupSettings(auth) {
+  var service = google.groupssettings('v1');
+
+  var rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  rl.question('Enter the email address of a Google Group in your domain: ',
+    function(groupEmail) {
+      rl.close();
+      service.groups.get({
+        auth: auth,
+        groupUniqueId: groupEmail,
+        alt: 'json',
+      }, function(err, response) {
+        if (err) {
+          console.log('The API returned an error: ' + err);
+          return;
+        }
+        console.log(JSON.stringify(response, null, 4));
+      });
   });
 }
